@@ -1,16 +1,33 @@
-import * as cdk from 'aws-cdk-lib';
+import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 
-export class BackendStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+export class TodoAppBackendStack extends Stack {
+  public readonly userPool: cognito.UserPool;
+  public readonly userPoolClient: cognito.UserPoolClient;
+
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    this.userPool = new cognito.UserPool(this, 'TodoUserPool', {
+      selfSignUpEnabled: true,
+      signInAliases: {
+        email: true,
+      },
+      autoVerify: {
+        email: true,
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+    });
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'BackendQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    this.userPoolClient = new cognito.UserPoolClient(this, 'TodoUserPoolClient', {
+      userPool: this.userPool,
+      generateSecret: false,
+    });
+
+    new cognito.CfnUserPoolDomain(this, 'UserPoolDomain', {
+      domain: 'todo-app-' + this.stackName.toLowerCase(),
+      userPoolId: this.userPool.userPoolId,
+    });
   }
 }
