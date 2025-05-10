@@ -48,6 +48,7 @@ export class TodoAppBackendStack extends Stack {
       exportName: 'CognitoUserPoolClientId',
     });
 
+
     //DDB
     const todosTable = new dynamodb.Table(this, 'TodosTable', {
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
@@ -60,6 +61,7 @@ export class TodoAppBackendStack extends Stack {
       value: todosTable.tableName,
       exportName: 'TodosTableName',
     });
+
 
     //lambdas
     const createTodoLambda = new nodejs.NodejsFunction(this, 'CreateTodoFunction', {
@@ -82,11 +84,32 @@ export class TodoAppBackendStack extends Stack {
     });
     todosTable.grantWriteData(getTodosLambda);
 
+    const updateTodoLambda = new nodejs.NodejsFunction(this, 'UpdateTodoFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../lambdas/updateTodo.ts'),
+      handler: 'handler',
+      environment: {
+        TODOS_TABLE: todosTable.tableName,
+      },
+    });
+    todosTable.grantWriteData(updateTodoLambda);
+
+    const deleteTodoLambda = new nodejs.NodejsFunction(this, 'DeleteTodoFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../lambdas/deleteTodo.ts'),
+      handler: 'handler',
+      environment: {
+        TODOS_TABLE: todosTable.tableName,
+      },
+    });
+    todosTable.grantWriteData(deleteTodoLambda);
+
 
     // API GW
     const api = new apigateway.RestApi(this, 'TodoApi', {
       restApiName: 'Todo Service',
     });
+
 
     // AUTHORIZER
     const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'TodoAuthorizer', {
@@ -106,6 +129,19 @@ export class TodoAppBackendStack extends Stack {
       authorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
+
+    const todoItemResource = todosResource.addResource('{id}');
+
+    todoItemResource.addMethod('PUT', new apigateway.LambdaIntegration(updateTodoLambda), {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
+    todoItemResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteTodoLambda), {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    });
+
 
     new CfnOutput(this, 'ApiUrl', {
       value: api.url!,
