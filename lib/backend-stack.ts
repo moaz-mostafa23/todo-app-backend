@@ -6,9 +6,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as path from 'path';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as iam from 'aws-cdk-lib/aws-iam';
-
-
+import * as identitypool from 'aws-cdk-lib/aws-cognito-identitypool';
 export class TodoAppBackendStack extends Stack {
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
@@ -36,6 +34,23 @@ export class TodoAppBackendStack extends Stack {
     new cognito.CfnUserPoolDomain(this, 'UserPoolDomain', {
       domain: 'todo-app-' + this.stackName.toLowerCase(),
       userPoolId: this.userPool.userPoolId,
+    });
+
+    const identityPool = new identitypool.IdentityPool(this, 'TodoIdentityPool', {
+      allowUnauthenticatedIdentities: false,
+      authenticationProviders: {
+        userPools: [
+          new identitypool.UserPoolAuthenticationProvider({
+            userPool: this.userPool,
+            userPoolClient: this.userPoolClient,
+          }),
+        ],
+      },
+    });
+
+    new CfnOutput(this, 'IdentityPoolId', {
+      value: identityPool.identityPoolId,
+      exportName: 'CognitoIdentityPoolId',
     });
 
     new CfnOutput(this, 'UserPoolIdOutput', {
@@ -108,8 +123,13 @@ export class TodoAppBackendStack extends Stack {
     // API GW
     const api = new apigateway.RestApi(this, 'TodoApi', {
       restApiName: 'Todo Service',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token'],
+        allowCredentials: true,
+      }
     });
-
 
     // AUTHORIZER
     const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'TodoAuthorizer', {
