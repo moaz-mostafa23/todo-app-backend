@@ -97,7 +97,7 @@ export class TodoAppBackendStack extends Stack {
         TODOS_TABLE: todosTable.tableName,
       },
     });
-    todosTable.grantWriteData(getTodosLambda);
+    todosTable.grantReadData(getTodosLambda);
 
     const updateTodoLambda = new nodejs.NodejsFunction(this, 'UpdateTodoFunction', {
       runtime: lambda.Runtime.NODEJS_18_X,
