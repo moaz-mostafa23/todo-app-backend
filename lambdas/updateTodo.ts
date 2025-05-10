@@ -21,7 +21,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     expressionAttributeValues[':t'] = title;
   }
 
-  if (completed) {
+  if (completed !== undefined) {
     updateExpression += ' completed = :c,';
     expressionAttributeValues[':c'] = completed;
   }
