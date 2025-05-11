@@ -1,11 +1,12 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { DynamoDB } from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
+import { withCors } from '../lib/middleware';
 
 const ddb = new DynamoDB.DocumentClient();
 const TABLE_NAME = process.env.TODOS_TABLE!;
 
-export const handler: APIGatewayProxyHandler = async (event: any) => {
+export const handler: APIGatewayProxyHandler = withCors(async (event: any) => {
   const userId = event.requestContext.authorizer?.claims?.sub;
   const { title } = JSON.parse(event.body || '{}');
 
@@ -30,4 +31,4 @@ export const handler: APIGatewayProxyHandler = async (event: any) => {
     statusCode: 201,
     body: JSON.stringify(todoItem),
   };
-};
+})

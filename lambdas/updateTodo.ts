@@ -1,10 +1,11 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { DynamoDB } from 'aws-sdk';
+import { withCors } from '../lib/middleware';
 
 const ddb = new DynamoDB.DocumentClient();
 const TABLE_NAME = process.env.TODOS_TABLE!;
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = withCors(async (event) => {
   const userId = event.requestContext.authorizer?.claims?.sub;
   const todoId = event.pathParameters?.id;
   const { title, completed } = JSON.parse(event.body || '{}');
@@ -49,10 +50,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
   return {
     statusCode: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
-    },
     body: JSON.stringify(updatedTodo)
   };
-};
+}) 
